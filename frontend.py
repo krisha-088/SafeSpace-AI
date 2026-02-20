@@ -55,7 +55,6 @@ with st.sidebar:
     # -------- EMERGENCY BUTTON --------
     if st.button("🚨 EMERGENCY CALL"):
         try:
-            # Fixed: POST request to backend endpoint
             requests.post(f"{BACKEND_URL}/emergency_call", timeout=5)
             st.success("Calling your phone... 📞 Emily is on it!")
         except:

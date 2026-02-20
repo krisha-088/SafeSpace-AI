@@ -1,4 +1,3 @@
-# ================= BACKEND : main.py =================
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,8 +5,9 @@ import sqlite3
 import os
 import threading
 from twilio.rest import Client
-from dotenv import load_dotenv   # ✅ added
-load_dotenv()                    # ✅ added
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -44,7 +44,6 @@ def send_sms_async(message: str, to_number=None):
 
     threading.Thread(target=task).start()
 
-
 def make_call_async(to_number=None):
     if not twilio_client or not TWILIO_PHONE_NUMBER or not (to_number or MY_PHONE_NUMBER):
         return
@@ -68,7 +67,7 @@ def init_db():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS moods(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            mood TEXT
+            mood INTEGER
         )
     """)
     conn.execute("DELETE FROM moods")
@@ -141,3 +140,20 @@ async def ask(q: Question):
 @app.get("/")
 def root():
     return {"status":"running"}
+
+# -------- MOODS ENDPOINT FOR GRAPH --------
+@app.get("/moods")
+def get_moods():
+    conn = get_conn()
+    cursor = conn.cursor()
+    cursor.execute("SELECT mood FROM moods")
+    data = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return data
+
+# -------- EMERGENCY CALL ENDPOINT --------
+@app.post("/emergency_call")
+def emergency_call():
+    make_call_async()
+    send_sms_async("⚠️ ALERT: Emergency call triggered by user")
+    return {"status":"call initiated"}
