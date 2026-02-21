@@ -93,7 +93,7 @@ def medical_response(text: str):
     msg = text.lower().strip()
 
     if msg in ["hi","hello","hey"]:
-        return greeting(),"Neutral"
+        return greeting(), "Neutral"
 
     # EMERGENCY CONDITIONS
     cardiac_combo = ("chest" in msg and ("left arm" in msg or "numb" in msg or "sweating" in msg))
@@ -104,38 +104,49 @@ def medical_response(text: str):
     if cardiac_combo or breathing_combo or self_harm or severe:
         send_sms_async("⚠️ ALERT: Emergency detected by SafeSpace AI")
         make_call_async()
-        return "⚠️ Emergency detected! Please go to the nearest hospital immediately or call someone nearby.","Critical"
+        return "⚠️ Emergency detected! Please go to the nearest hospital immediately or call someone nearby.", "Critical"
 
     # MOOD
     if any(w in msg for w in ["sad","depressed","crying"]):
-        return "Emotional stress can affect health. Rest, hydrate, and talk to someone you trust. Seek help if unsafe thoughts occur.","Low"
+        return "Emotional stress can affect health. Rest, hydrate, and talk to someone you trust. Seek help if unsafe thoughts occur.", "Low"
 
     # ACIDITY
     if any(w in msg for w in ["acidity","heartburn","burning chest","after spicy"]):
-        return "Likely acidity. Avoid spicy food at night, don't lie down after meals, and take an antacid if needed.","Sick"
+        return "Likely acidity. Avoid spicy food at night, don't lie down after meals, and take an antacid if needed.", "Sick"
 
-    # COMMON
+    # COMMON SYMPTOMS
     if "fever" in msg:
-        return "Take paracetamol, fluids, and rest. See doctor if >3 days.","Sick"
+        return "Take paracetamol, fluids, and rest. See doctor if >3 days.", "Sick"
 
-    if "period" in msg or "cramps" in msg:
-        return "Yes — mild cramps on first day of periods are normal. Use heating pad and warm fluids. Consult doctor if severe pain or vomiting.","Women Health"
+    if "body pain" in msg or "muscle pain" in msg:
+        return "Rest, hydrate, and avoid strenuous activity. If pain persists, see a doctor.", "Sick"
 
-    return f"Based on your symptom '{text}', rest, hydration and monitoring advised. Consult doctor if worsening.","Neutral"
+    # PERIOD / CRAMPS
+    if "period cramps" in msg or ("period" in msg and "cramps" in msg):
+        return "Yes — mild cramps on the first day of periods are normal. Use heating pad and warm fluids. Consult a doctor if pain is severe or accompanied by vomiting.", "Women Health"
+
+    if "period" in msg:
+        return "Yes — mild cramps during periods are normal. Use warm fluids and rest. See a doctor if severe.", "Women Health"
+
+    if "cramps" in msg:
+        return "Mild cramps can be eased with heating pads, rest, and warm fluids. See a doctor if severe.", "Women Health"
+
+    # DEFAULT RESPONSE
+    return f"Based on your symptom '{text}', rest, hydration, and monitoring advised. Consult a doctor if worsening.", "Neutral"
 
 # -------- CHAT --------
 @app.post("/ask")
 async def ask(q: Question):
-    reply,mood=medical_response(q.question)
+    reply, mood = medical_response(q.question)
 
-    mood_map={"Critical":1,"Low":2,"Neutral":3,"Sick":7,"Women Health":8}
-    mood_val=mood_map.get(mood,3)
+    mood_map = {"Critical":1, "Low":2, "Neutral":3, "Sick":7, "Women Health":8}
+    mood_val = mood_map.get(mood, 3)
 
-    conn=get_conn()
-    conn.execute("INSERT INTO moods (mood) VALUES (?)",(mood_val,))
+    conn = get_conn()
+    conn.execute("INSERT INTO moods (mood) VALUES (?)", (mood_val,))
     conn.commit()
     conn.close()
-    return {"reply":reply,"mood":mood_val}
+    return {"reply": reply, "mood": mood_val}
 
 @app.get("/")
 def root():
